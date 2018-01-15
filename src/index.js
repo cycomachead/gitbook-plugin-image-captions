@@ -1,6 +1,9 @@
 'use strict';
 
+var path = require('path');
+
 var cheerio = require('cheerio');
+var sizeOf = require('image-size');
 var Q = require('q');
 
 var PLUGIN_NAME = 'image-captions';
@@ -73,11 +76,54 @@ function setImageAttributes (img, data) {
   }
 }
 
-function setImageCaption ($, img, data) {
+/*
+    450 is the max size in the default gitbook template
+*/
+function findImageSize(src, page) {
+  var fileSize = sizeOf(path.resolve('.', src.replace('/', '')));
+  var MAX_WIDTH = 450;
+  var displayWidth = Math.min(fileSize.width, 450);
+  var ratio = fileSize.width / 450;
+  return {
+    height: Math.round(fileSize.height / ratio),
+    width: displayWidth
+  };
+}
+
+/*
+Sample final SVG.
+<svg xmlns="http://www.w3.org/2000/svg"
+    writing-mode="tb-rl"
+    width="30" height="400">
+    <text text-anchor="middle" transform="rotate(180 15 200)" x="25" y="200">
+      Hello, out there
+    </text>
+</svg>
+*/
+function buildYAxis(img, yAxis, page) {
+    var src = img.attr('src');
+    var fileSize = findImageSize(src, page);
+    var height = fileSize.height;
+    var midpoint = { x: 15, y: Math.round(height / 2)};
+    var rotate = 'rotate(180 15 Y)'.replace('Y', midpoint.y);
+    return '<svg class="figure-y-axis" xmlns="http://www.w3.org/2000/svg" writing-mode="tb-rl" width="30" height="H"><text text-anchor="middle" x="15" transform="R" y="Y">LABEL</text></svg>'.replace('H', height).replace('R', rotate).replace('LABEL', yAxis).replace('Y', midpoint.y);
+}
+
+function setImageCaption ($, img, data, page) {
   var imageParent = img.parent();
   data.label = img.attr('title') || img.attr('alt'); // all page variables are already interpolated
   var caption = renderTemplate(data.caption_template, data);
-  var figure = '<figure id="fig' + data.key + '">' + $.html(img) + '<figcaption>' + caption + '</figcaption></figure>';
+  var figure = '<figure id="fig' + data.key + '">';
+  var y_axis = data.y_axis || 'Y-AXIS';
+  if (y_axis) {
+      figure += buildYAxis(img, y_axis, page);
+  }
+  figure += $.html(img);
+  var x_axis = data.x_axis || 'X-AXIS';
+  if (x_axis) {
+      figure += '<div class="figure-x-axis">' + x_axis + '</div>';
+  }
+  figure += '<figcaption>' + caption + '</figcaption></figure>';
   if (imageParent[0].tagName === 'p') {
     // the image is wrapped only by a paragraph
     imageParent.replaceWith(figure);
@@ -107,7 +153,7 @@ var insertCaptions = function (images, page, htmlContent) {
     var data = images.filter(function (item) { return item.key === key; })[0];
     if (data && !data.skip) {
       setImageAttributes(img, data);
-      setImageCaption($, img, data);
+      setImageCaption($, img, data, page);
       setImageAlignment($, img, data);
     }
   });

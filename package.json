@@ -24,7 +24,8 @@
   },
   "dependencies": {
     "cheerio": "^0.22.0",
-    "q": "^1.4.1"
+    "image-size": "^0.6.2",
+    "q": "^1.5.1"
   },
   "devDependencies": {
     "eslint": "^3.9.1",
