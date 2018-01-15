@@ -77,7 +77,9 @@ function setImageAttributes (img, data) {
 }
 
 /*
-    450 is the max size in the default gitbook template
+    450 is what's in my book config.
+    TODO: get from book config, and for each image
+    TODO: fix the path hack.
 */
 function findImageSize(src, page) {
   var fileSize = sizeOf(path.resolve('.', src.replace('/', '')));
@@ -114,12 +116,12 @@ function setImageCaption ($, img, data, page) {
   data.label = img.attr('title') || img.attr('alt'); // all page variables are already interpolated
   var caption = renderTemplate(data.caption_template, data);
   var figure = '<figure id="fig' + data.key + '">';
-  var y_axis = data.y_axis || 'Y-AXIS';
+  var y_axis = data['y-axis'];
   if (y_axis) {
       figure += buildYAxis(img, y_axis, page);
   }
   figure += $.html(img);
-  var x_axis = data.x_axis || 'X-AXIS';
+  var x_axis = data['x-axis'];
   if (x_axis) {
       figure += '<div class="figure-x-axis">' + x_axis + '</div>';
   }
@@ -152,6 +154,7 @@ var insertCaptions = function (images, page, htmlContent) {
     var key = pageLevel + '.' + (i + 1);
     var data = images.filter(function (item) { return item.key === key; })[0];
     if (data && !data.skip) {
+        console.log('image data', data);
       setImageAttributes(img, data);
       setImageCaption($, img, data, page);
       setImageAlignment($, img, data);
@@ -185,6 +188,19 @@ function readSkipFlag (config, imageKey) {
   return false;
 }
 
+/*
+    TODO: consolidate
+*/
+function readAttrFromConfig (config, attr, imageKey) {
+  if (config.images && config.images[imageKey] && config.images[imageKey][attr]) {
+    return config.images[imageKey][attr];
+  } else if (config[attr]) {
+    return config[attr];
+  }
+  return null;
+}
+
+
 function shouldBeWrapped (img) {
   return img.parent().children().length === 1 &&
          img.parent().text() === '' &&
@@ -198,8 +214,12 @@ function preprocessImages (results, config) {
   })
   .reduce(function (acc, val) { return acc.concat(val.data); }, []) // flatten sections images
   .map(function (image) {
+      console.log('IMAGE', image.key);
     image.nro = totalCounter++;
+    // TODO: Consolidate
     image.attributes = readImageAttributesFromConfig(config, image.key);
+    image['y-axis'] = readAttrFromConfig(config, 'y-axis', image.key);
+    image['x-axis'] = readAttrFromConfig(config, 'x-axis', image.key);
 
     image.skip = readSkipFlag(config, image.key);
 
