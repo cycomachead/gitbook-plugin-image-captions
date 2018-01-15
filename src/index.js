@@ -154,7 +154,6 @@ var insertCaptions = function (images, page, htmlContent) {
     var key = pageLevel + '.' + (i + 1);
     var data = images.filter(function (item) { return item.key === key; })[0];
     if (data && !data.skip) {
-        console.log('image data', data);
       setImageAttributes(img, data);
       setImageCaption($, img, data, page);
       setImageAlignment($, img, data);
@@ -188,9 +187,6 @@ function readSkipFlag (config, imageKey) {
   return false;
 }
 
-/*
-    TODO: consolidate
-*/
 function readAttrFromConfig (config, attr, imageKey) {
   if (config.images && config.images[imageKey] && config.images[imageKey][attr]) {
     return config.images[imageKey][attr];
@@ -214,7 +210,6 @@ function preprocessImages (results, config) {
   })
   .reduce(function (acc, val) { return acc.concat(val.data); }, []) // flatten sections images
   .map(function (image) {
-      console.log('IMAGE', image.key);
     image.nro = totalCounter++;
     // TODO: Consolidate
     image.attributes = readImageAttributesFromConfig(config, image.key);
